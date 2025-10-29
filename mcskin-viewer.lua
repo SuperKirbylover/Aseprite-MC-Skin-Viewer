@@ -15,12 +15,9 @@ if not app.sprite then
 	return
 end
 
-local spriteScaleMultiplier = 1
 if not (app.sprite.width%64 == 0 and app.sprite.height%64 == 0) then -- checks if this sprite is a multiple of 64 (i.e. 128, 256, etc etc)
 	app.alert("The sprite canvas must be a multiple of 64 x 64")
 	return
-else
-	spriteScaleMultiplier = app.sprite.width/64 -- if it's 64 x 64, scale multiplier will be 1. higher, it'll be 2, 3, etc
 end
 
 --keep track of all windows
@@ -39,7 +36,7 @@ local TARGET_FPS = 30
 
 dofile("mcskin-modules"..app.fs.pathSeparator.."mcmodel.lua")
 
-local model = MCModel.new(spriteScaleMultiplier)
+local model = MCModel.new(app.sprite.width/64) -- if it's 64 x 64, scale multiplier will be 1. higher, it'll be 2, 3, etc)
 --print(model)
 
 local showDebug = false
@@ -51,7 +48,7 @@ local camera = {
 }
 
 local curr_sprite = app.sprite
-local texture = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier, curr_sprite.colorMode)
+local texture = Image(64*model.uvScale, 64*model.uvScale, curr_sprite.colorMode)
 
 texture:drawSprite(curr_sprite, app.frame.frameNumber)
 
@@ -242,7 +239,7 @@ on_filenamechange = function(ev)
  dlg:modify{title = getLocalFilename(curr_sprite)} 
 end
 
-local curr_cell = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier)
+local curr_cell = Image(64*model.uvScale, 64*model.uvScale)
 local curr_mode
 if app.cel then
 	curr_cell:drawImage(app.cel.image, app.cel.position)
@@ -268,11 +265,11 @@ texture_changed = function(ev)
 			local last_mode = curr_mode
 			curr_mode = app.sprite.colorMode -- update color mode
 			
-			if app.sprite.width/64 ~= spriteScaleMultiplier then -- if sprite size changed
+			if app.sprite.width/64 ~= model.uvScale then -- if sprite size changed
 				--app.alert("Canvas size changed. Please restart MCSkinViewer.") -- TODO: update UVs for all cubes
 				if app.sprite.width%64 == 0 and app.sprite.height%64 == 0 then
-					spriteScaleMultiplier = app.sprite.width/64
-					model:updateUV(spriteScaleMultiplier)
+					model.uvScale = app.sprite.width/64
+					model:updateUV()
 				else
 					app.alert("Error: Canvas changed to an invalid size")
 				end
@@ -280,7 +277,7 @@ texture_changed = function(ev)
 
 				--if were mirroring
 				last_cell = curr_cell:clone()
-				curr_cell = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier, app.cel.image.colorMode)
+				curr_cell = Image(64*model.uvScale, 64*model.uvScale, app.cel.image.colorMode)
 				curr_cell:drawImage(app.cel.image, app.cel.position)
 					
 				if last_frame ~= curr_frame or curr_layer ~= last_layer or last_mode ~= curr_mode then
@@ -289,8 +286,8 @@ texture_changed = function(ev)
 
 				if (not ev.fromUndo) then
 
-					for x = 0, (64*spriteScaleMultiplier) - 1 do
-						for y = 0, (64*spriteScaleMultiplier) - 1 do
+					for x = 0, (64*model.uvScale) - 1 do
+						for y = 0, (64*model.uvScale) - 1 do
 							local a = Color(last_cell:getPixel(x, y)) -- old color being drawn over
 							local b = Color(curr_cell:getPixel(x, y)) -- new color
 
@@ -302,10 +299,10 @@ texture_changed = function(ev)
 								else
 									curr_mirrorMap = mirror_map
 								end
-								curr_mirrorMap:resize(64*spriteScaleMultiplier, 64*spriteScaleMultiplier)
+								curr_mirrorMap:resize(64*model.uvScale, 64*model.uvScale)
 								c = curr_mirrorMap:getPixel(x, y)
 
-								curr_cell:drawPixel((app.pixelColor.rgbaR(c)/4)*spriteScaleMultiplier, (app.pixelColor.rgbaG(c)/4)*spriteScaleMultiplier, b)
+								curr_cell:drawPixel((app.pixelColor.rgbaR(c)/4)*model.uvScale, (app.pixelColor.rgbaG(c)/4)*model.uvScale, b)
 							end
 						end
 					end
@@ -316,7 +313,7 @@ texture_changed = function(ev)
 			end
 			app.refresh() 
 			
-			texture = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier, curr_sprite.colorMode) --this is why it breaks btw
+			texture = Image(64*model.uvScale, 64*model.uvScale, curr_sprite.colorMode) --this is why it breaks btw
 			texture:drawSprite(curr_sprite, app.frame.frameNumber)
 
 			if dlg.data["model_type"] == "Auto" then
@@ -558,8 +555,7 @@ dlg:combobox{
 		end
 	repaint()
 	return
-	end
-}
+end}
 
 -- TODO:
 -- this is insane, please rewrite to be more dynamic
@@ -698,9 +694,9 @@ dlg:check{
 	onclick = function()
 		if app.sprite == curr_sprite and app.cel then
 			if app.sprite.width%64 == 0 and app.sprite.height%64 == 0 then
-				spriteScaleMultiplier = app.sprite.width/64 -- updating sprite scale multiplier just in case
+				model.uvScale = app.sprite.width/64 -- updating sprite scale multiplier just in case
 				last_cell = curr_cell:clone()
-				curr_cell = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier)
+				curr_cell = Image(64*model.uvScale, 64*model.uvScale)
 				curr_cell:drawImage(app.cel.image, app.cel.position)
 			end
 		end
@@ -778,7 +774,7 @@ dlg:button{
 				local cube_from = model:get_cube(title_to_camel(dlg.data["copy_from"]))
 				local cube_to = model:get_cube(title_to_camel(dlg.data["paste_to"]))
 				
-				curr_cell = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier, app.cel.image.colorMode)
+				curr_cell = Image(64*model.uvScale, 64*model.uvScale, app.cel.image.colorMode)
 				curr_cell:drawImage(app.cel.image, app.cel.position)
 				
 				for i=1, 6 do
@@ -838,7 +834,7 @@ dlg:button{
 					has_target = false
 				end
 
-				curr_cell = Image(64*spriteScaleMultiplier, 64*spriteScaleMultiplier, app.cel.image.colorMode)
+				curr_cell = Image(64*model.uvScale, 64*model.uvScale, app.cel.image.colorMode)
 				curr_cell:drawImage(app.cel.image, app.cel.position)
 
 				local cell_copy = Image(curr_cell)

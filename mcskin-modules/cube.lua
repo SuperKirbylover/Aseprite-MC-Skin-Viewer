@@ -98,19 +98,19 @@ function Cube.new(params)
 	local size = params.size or Vec3(1,1,1)
 	inst.cubeSize = size -- used in UV recalculation
 	local pos = params.pos or Vec3()
-	local scaleMultiplier = params.scaleMultiplier or 1
+	--local scaleMultiplier = params.scaleMultiplier or 1
 
 	local uv = params.uv or Tex2()
 	inst.uvOrigin = uv -- used in UV recalculation
 	local inflate = params.inflate or 0
 	
-	inst:setUV(scaleMultiplier)
+	inst:setUV(1)
 
 	pos = pos:div(8)
 
 	inflate = inflate * 2
 	
-	size = (size+Vec3(inflate,inflate,inflate)):div(16)
+	size = (size+Vec3(inflate, inflate, inflate)):div(16)
 	
 	-- multiply by size
 	for i=1, 8 do
